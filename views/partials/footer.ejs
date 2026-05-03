@@ -1,0 +1,67 @@
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    const P_VAPID_KEY = 'BPyp3b9leWysjygCzu5PH6Bu_Xk-hUuyoU0fr7Pa1B6RrxmbBHk5dekQCbYj6TrEz75ptqWIQFJNAkSEPqNZoOU';
+    const loggedInUser = "<%= user ? user.name : '' %>";
+
+    // 1. Function to Register Notifications
+    async function setupNotifications() {
+        if ('serviceWorker' in navigator && loggedInUser) {
+            try {
+                const register = await navigator.serviceWorker.register('/sw.js');
+                
+                // IMPORTANT: Ask user for permission
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.log("User denied notifications");
+                    return;
+                }
+
+                const subscription = await register.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(P_VAPID_KEY)
+                });
+
+                await fetch('/subscribe', {
+                    method: 'POST',
+                    body: JSON.stringify({ subscription, customerName: loggedInUser }),
+                    headers: { 'content-type': 'application/json' }
+                });
+                console.log("Notification system active!");
+            } catch (err) {
+                console.error("Setup failed:", err);
+            }
+        }
+    }
+
+    // Run setup when page loads
+    window.addEventListener('load', setupNotifications);
+
+    // 2. Real-time Socket Update
+    const socket = io();
+    socket.on('order-status-updated', (data) => {
+        if (data.customer === loggedInUser) {
+            // Update UI if on "My Orders" page
+            const statusEl = document.getElementById(`status-text-${data.orderId}`);
+            if (statusEl) {
+                statusEl.innerText = data.status;
+                statusEl.className = `px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                    data.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                }`;
+            }
+            alert(`Order #${data.orderId} is now ${data.status}!`);
+        }
+    });
+
+    // Helper to process your Public Key
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+</script>

@@ -1,0 +1,59 @@
+<%- include('../partials/header') %>
+<div class="min-h-screen bg-stone-200 py-12 px-6 text-stone-900">
+    <div class="max-w-3xl mx-auto bg-white p-10 rounded-[3rem] shadow-2xl border border-stone-100">
+        <h2 class="text-4xl font-black mb-8 italic">Your Cart</h2>
+        
+        <% if (cart.length > 0) { %>
+            <div class="divide-y divide-stone-100 mb-8 border border-[#EA580C] rounded-3xl p-4">
+                <% cart.forEach(item => { %>
+                    <div class="py-6 flex justify-between items-center" id="item-row-<%= item.product._id %>">
+                        <div>
+                            <h3 class="font-bold text-xl text-stone-800"><%= item.product.name %></h3>
+                            <p class="text-[#EA580C] font-black text-sm">₹<%= item.product.price %></p>
+                        </div>
+
+                        <div class="flex items-center space-x-4">
+                            <button onclick="changeQty('<%= item.product._id %>', 'decrease')" class="bg-stone-100 h-10 w-10 rounded-full font-black hover:bg-red-100">-</button>
+                            <span class="font-bold text-lg" id="qty-<%= item.product._id %>"><%= item.quantity %></span>
+                            <button onclick="changeQty('<%= item.product._id %>', 'increase')" class="bg-stone-100 h-10 w-10 rounded-full font-black hover:bg-green-100 text-[#EA580C]">+</button>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+            <div class="flex justify-between items-center mb-8 px-4">
+                <span class="text-stone-400 font-bold uppercase tracking-widest text-xs">Total Amount</span>
+                <span class="text-3xl font-black" id="cart-total">₹<%= total %></span>
+            </div>
+            <form action="/checkout" method="POST">
+                <button type="submit" class="w-full bg-[#EA580C] text-white py-5 rounded-2xl font-black text-lg shadow-lg hover:opacity-90 transition transform active:scale-95">Checkout</button>
+            </form>
+        <% } else { %>
+            <div class="text-center py-10">
+                <p class="text-stone-400 mb-6">Your cart is empty.</p>
+                <a href="/" class="text-[#EA580C] font-bold underline">Back to Menu</a>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+async function changeQty(productId, action) {
+    const res = await fetch('/update-quantity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `productId=${productId}&action=${action}`
+    });
+    const data = await res.json();
+    if (data.success) {
+        if (data.currentQuantity === 0) {
+            document.getElementById(`item-row-${productId}`).remove();
+            if (data.newCount === 0) location.reload();
+        } else {
+            document.getElementById(`qty-${productId}`).innerText = data.currentQuantity;
+        }
+        document.getElementById('cart-total').innerText = `₹${data.newTotal}`;
+        const cartBadge = document.getElementById('cart-count');
+        if (cartBadge) cartBadge.innerText = data.newCount;
+    }
+}
+</script>

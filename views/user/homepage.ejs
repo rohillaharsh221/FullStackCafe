@@ -1,0 +1,208 @@
+<%- include('../partials/header') %>
+
+<style>
+    .product-card { display: flex; flex-direction: column; height: 100%; }
+    .product-content { flex-grow: 1; display: flex; flex-direction: column; }
+    
+    .description-text {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 2.5rem; 
+    }
+
+    @keyframes slideDown {
+        from { transform: translate(-50%, -100%); opacity: 0; }
+        to { transform: translate(-50%, 20px); opacity: 1; }
+    }
+    .toast-active { animation: slideDown 0.5s forwards; opacity: 1 !important; }
+</style>
+
+<div class="min-h-screen bg-stone-200 py-12 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="relative bg-white/40 backdrop-blur-xl border border-white/20 p-10 rounded-[3rem] mb-12 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <span class="inline-block px-4 py-1 rounded-full bg-[#EA580C]/10 text-[#EA580C] text-[10px] font-black uppercase tracking-widest mb-4">Developer Fuel</span>
+                    <h2 class="text-6xl font-black italic tracking-tighter text-stone-900 leading-none">Script & Sip</h2>
+                    <p class="mt-4 text-stone-600 font-medium text-lg max-w-md border-l-4 border-[#EA580C] pl-4">
+                       Fueling your logic, one cup at a time.<br>
+                        The perfect blend of <span class="text-[#EA580C]">caffeine and code</span>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex space-x-3 mb-12 overflow-x-auto pb-2 scrollbar-hide">
+            <% ['All', 'Drinks', 'Snacks', 'Desserts'].forEach(cat => { %>
+                <a href="<%= cat === 'All' ? '/' : '/?category=' + cat %>" 
+                   class="px-8 py-3 rounded-2xl font-bold text-sm transition-all duration-300 shadow-sm border
+                   <%= activeCategory === cat ? 'bg-[#1C1917] text-white border-[#1C1917]' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50' %>">
+                    <%= cat %>
+                </a>
+            <% }) %>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <% products.forEach(p => { %>
+            <div class="product-card bg-white rounded-[2.5rem] shadow-sm border border-stone-100 overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer group"
+                 data-name="<%= p.name %>" data-price="₹<%= p.price %>" data-desc="<%= p.description %>" data-img="<%= p.image %>" data-id="<%= p._id %>"
+                 onclick="handleModalOpen(this)">
+                
+                <div class="overflow-hidden relative">
+                    <img src="<%= p.image %>" class="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500 <%= p.isAvailable ? '' : 'grayscale opacity-60' %>" onerror="this.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=500'">
+                    
+                    <% if (!p.isAvailable) { %>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="bg-white/90 px-6 py-2 rounded-full text-stone-900 font-black uppercase text-[10px] tracking-widest shadow-xl border border-stone-200">Sold Out</span>
+                        </div>
+                    <% } %>
+                </div>
+
+                <div class="p-8 product-content">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-bold text-stone-800"><%= p.name %></h3>
+                        <span class="bg-stone-100 px-3 py-1 rounded-lg text-[#EA580C] font-black text-sm">₹<%= p.price %></span>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-stone-500 text-sm leading-relaxed description-text"><%= p.description %></p>
+                        <% if (p.description && p.description.length > 80) { %>
+                            <span class="text-[#EA580C] text-xs font-bold hover:underline">Show More</span>
+                        <% } %>
+                    </div>
+                    
+                    <% if (p.isAvailable) { %>
+                        <button onclick="event.stopPropagation(); addToCart('<%= p._id %>')" class="w-full mt-6 bg-[#1C1917] text-white py-4 rounded-2xl font-bold hover:bg-[#EA580C] transition transform active:scale-95 shadow-lg">
+                            Add to Cart
+                        </button>
+                    <% } else { %>
+                        <button disabled class="w-full mt-6 bg-stone-100 text-stone-400 py-4 rounded-2xl font-bold cursor-not-allowed border border-dashed border-stone-200">
+                            Out of Stock ☕
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+
+        <% if (totalPages > 1) { %>
+            <div class="mt-16 flex justify-center items-center space-x-4">
+                <% if (currentPage > 1) { %>
+                    <a href="/?page=<%= currentPage - 1 %>&category=<%= activeCategory %>" class="px-6 py-3 bg-white rounded-2xl font-bold text-stone-600 shadow-sm border border-stone-100 hover:bg-stone-50 transition">Prev</a>
+                <% } %>
+                <span class="text-stone-400 font-black text-sm uppercase tracking-widest">Page <%= currentPage %> of <%= totalPages %></span>
+                <% if (currentPage < totalPages) { %>
+                    <a href="/?page=<%= currentPage + 1 %>&category=<%= activeCategory %>" class="px-6 py-3 bg-[#1C1917] text-white rounded-2xl font-bold shadow-md hover:bg-[#EA580C] transition">Next</a>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<div id="productModal" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-stone-900/40 backdrop-blur-md" onclick="closeProductModal()"></div>
+    <div class="relative bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full overflow-hidden transform transition-all animate-in zoom-in duration-300">
+        <button onclick="closeProductModal()" class="absolute top-6 right-6 z-10 bg-white/80 backdrop-blur-md p-2 rounded-full shadow-lg hover:bg-[#EA580C] hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        <div class="flex flex-col md:flex-row">
+            <div class="md:w-1/2"><img id="modalImg" src="" class="h-full w-full object-cover min-h-[300px]"></div>
+            <div class="md:w-1/2 p-10 flex flex-col justify-center">
+                <span class="text-[#EA580C] text-[10px] font-black uppercase tracking-widest mb-2">Item Details</span>
+                <h2 id="modalName" class="text-3xl font-black text-stone-900 mb-2 italic"></h2>
+                <p id="modalPrice" class="text-2xl font-black text-stone-800 mb-6"></p>
+                <div class="border-l-4 border-[#EA580C] pl-4 mb-8 max-h-48 overflow-y-auto">
+                    <p id="modalDesc" class="text-stone-500 leading-relaxed italic text-sm"></p>
+                </div>
+                <button id="modalAddToCartBtn" class="w-full bg-[#1C1917] text-white py-5 rounded-2xl font-black text-lg hover:bg-[#EA580C] transition shadow-xl active:scale-95">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="fixed top-0 left-1/2 -translate-x-1/2 bg-[#1C1917] text-white px-8 py-4 rounded-full font-bold shadow-2xl transition-all duration-300 opacity-0 -translate-y-full z-[200]">Item added to cart! ☕</div>
+
+<script>
+const PUBLIC_VAPID_KEY = 'BPyp3b9leWysjygCzu5PH6Bu_Xk-hUuyoU0fr7Pa1B6RrxmbBHk5dekQCbYj6TrEz75ptqWIQFJNAkSEPqNZoOU';
+const customerName = "<%= user ? user.name : '' %>";
+
+// Initialize Notifications and Service Worker
+if ('serviceWorker' in navigator && customerName) {
+    window.addEventListener('load', async () => {
+        try {
+            const register = await navigator.serviceWorker.register('/sw.js');
+            
+            // Check for notification permission
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const subscription = await register.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+                });
+
+                await fetch('/subscribe', {
+                    method: 'POST',
+                    body: JSON.stringify({ subscription, customerName }),
+                    headers: { 'content-type': 'application/json' }
+                });
+            }
+        } catch (err) {
+            console.error("Service Worker registration failed:", err);
+        }
+    });
+}
+
+function handleModalOpen(el) {
+    const { name, price, desc, img, id } = el.dataset;
+    document.getElementById('modalName').innerText = name;
+    document.getElementById('modalPrice').innerText = price;
+    document.getElementById('modalDesc').innerText = desc;
+    document.getElementById('modalImg').src = img;
+    const modalBtn = document.getElementById('modalAddToCartBtn');
+    modalBtn.onclick = () => { addToCart(id); closeProductModal(); };
+    document.getElementById('productModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+async function addToCart(productId) {
+    try {
+        const res = await fetch('/add-to-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const cartElement = document.getElementById('cart-count');
+            if (cartElement) cartElement.innerText = data.cartCount;
+            const toast = document.getElementById('toast');
+            toast.classList.add('toast-active');
+            toast.classList.remove('opacity-0', '-translate-y-full');
+            setTimeout(() => {
+                toast.classList.remove('toast-active');
+                toast.classList.add('opacity-0', '-translate-y-full');
+            }, 2500);
+        }
+    } catch (err) { console.error(err); }
+}
+
+// Utility function to convert VAPID key
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+</script>
+
+<%- include('../partials/footer') %>
